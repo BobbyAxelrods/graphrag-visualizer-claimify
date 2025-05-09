@@ -1,6 +1,7 @@
 export interface SearchResult {
     // response: string | Record<string, any> | Array<Record<string, any>>;
     response: string;
+    claimify: any;
     context_data: string | Array<Record<string, any>> | Record<string, Array<Record<string, any>>>;
     context_text: string | string[] | Record<string, string>;
     completion_time: number;

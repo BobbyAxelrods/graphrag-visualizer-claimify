@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import {
   Box,
   Button,
@@ -20,6 +21,9 @@ import {
   Collapse,
   Link,
   Alert,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -93,15 +97,18 @@ const APISearchDrawer: React.FC<APISearchDrawerProps> = ({
     }));
   };
 
+{/* Change here  */}
+
   return (
     <Drawer
       anchor="left"
       open={apiDrawerOpen}
       onClose={toggleDrawer(false)}
-      sx={{ zIndex: 1500 }}
+      sx={{ zIndex: 1500, '& .MuiDrawer-paper': { width: '60vw', maxWidth: '90vw', height: '100%', overflowY: 'auto' }}}
+
     >
       <Box
-        sx={{ width: "60vw", padding: 2, paddingTop: 6, position: "relative" }}
+        sx={{ padding: 2, paddingTop: 6, position: 'relative'  }}
       >
         {/* Close Button at the top-right corner */}
         <IconButton
@@ -187,15 +194,67 @@ const APISearchDrawer: React.FC<APISearchDrawerProps> = ({
 
         {apiSearchResults && (
           <>
+          {/* import ReactMarkdown from 'react-markdown'; */}
+
             {/* Search Results Card */}
             <Card sx={{ marginTop: 2 }}>
-              <CardHeader title="Search Results" />
-              <CardContent>
-                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                  {apiSearchResults.response}
+              <CardHeader title="Search Results" 
+              sx={{ 
+                '& .MuiCardHeader-content': {
+                  overflow: 'hidden',textOverflow: 'ellipsis'
+                }
+              }} 
+              
+              />
+              <CardContent
+              sx={{ 
+                maxHeight: '70vh',  // Maximum height of 70% viewport height
+                overflowY: 'auto',  // Enable vertical scrolling if content exceeds maxHeight
+                '&::-webkit-scrollbar': {
+                  width: '8px'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  borderRadius: '4px'
+                }
+              }}>
+                <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap", '& img': { maxWidth: '100%' },  // Ensure images don't overflow
+                    '& table': { width: '100%' }     // Full-width tables
+                    }}>
+                  <ReactMarkdown>{apiSearchResults.response}</ReactMarkdown>
+                </Typography>
+                <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap", marginTop: 2 }}>
+                  <strong>Claimify:</strong>
+                  <List>
+                    {apiSearchResults.claimify.map((item: string, index: number) => (
+                      <ListItem key={index}>
+                        <ListItemText primary={<ReactMarkdown>{item}</ReactMarkdown>} />
+                      </ListItem>
+                    ))}
+                  </List>
                 </Typography>
               </CardContent>
             </Card>
+            {/* Search Results Card
+            <Card sx={{ marginTop: 2 }}>
+              <CardHeader title="Search Results" />
+              <CardContent>
+                <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap" }}>
+                  <ReactMarkdown></>{apiSearchResults.response}</ReactMarkdown>
+                </Typography>
+                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", marginTop: 2 }}>
+                  
+          <strong>Claimify:</strong>
+          <List>
+            {apiSearchResults.claimify.map((item:string, index: number) => (
+              <ListItem key={index}>
+                <ListItemText primary={item} />
+              </ListItem>
+            ))}
+          </List>
+        </Typography>
+              </CardContent>
+            </Card> */}
 
             {/* Metadata Card */}
             <Card sx={{ marginTop: 2 }}>
