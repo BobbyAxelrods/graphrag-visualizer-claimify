@@ -218,43 +218,68 @@ const APISearchDrawer: React.FC<APISearchDrawerProps> = ({
                   borderRadius: '4px'
                 }
               }}>
-                <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap", '& img': { maxWidth: '100%' },  // Ensure images don't overflow
-                    '& table': { width: '100%' }     // Full-width tables
-                    }}>
-                  <ReactMarkdown>{apiSearchResults.response}</ReactMarkdown>
-                </Typography>
+
                 <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap", marginTop: 2 }}>
                   <strong>Claimify:</strong>
-                  <List>
-                    {apiSearchResults.claimify.map((item: string, index: number) => (
-                      <ListItem key={index}>
-                        <ListItemText primary={<ReactMarkdown>{item}</ReactMarkdown>} />
-                      </ListItem>
-                    ))}
-                  </List>
+                  {apiSearchResults.claimify && 
+                  Array.isArray(apiSearchResults.claimify) && 
+                  apiSearchResults.claimify.length > 0 ? (
+                    <List>
+                      {apiSearchResults.claimify.map((item: string, index: number) => (
+                        <ListItem key={index}>
+                          <ListItemText 
+                            primary={
+                              item ? 
+                              <ReactMarkdown>{item}</ReactMarkdown> : 
+                              <Typography color="text.secondary">No content available</Typography>
+                            } 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      No claims were generated for this search result
+                    </Typography>
+                  )}
                 </Typography>
+
+
               </CardContent>
             </Card>
-            {/* Search Results Card
+            {/* Search Results Card */}
             <Card sx={{ marginTop: 2 }}>
               <CardHeader title="Search Results" />
               <CardContent>
                 <Typography variant="body1" component="div" sx={{ whiteSpace: "pre-wrap" }}>
-                  <ReactMarkdown></>{apiSearchResults.response}</ReactMarkdown>
+                  <ReactMarkdown>{apiSearchResults.response}</ReactMarkdown>
                 </Typography>
                 <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", marginTop: 2 }}>
-                  
-          <strong>Claimify:</strong>
-          <List>
-            {apiSearchResults.claimify.map((item:string, index: number) => (
-              <ListItem key={index}>
-                <ListItemText primary={item} />
-              </ListItem>
-            ))}
-          </List>
-        </Typography>
+                  <strong>Claimify:</strong>
+                  {apiSearchResults.claimify && 
+                  Array.isArray(apiSearchResults.claimify) && 
+                  apiSearchResults.claimify.length > 0 ? (
+                    <List>
+                      {apiSearchResults.claimify.map((item: string, index: number) => (
+                        <ListItem key={index}>
+                          <ListItemText 
+                            primary={
+                              item ? 
+                              <ReactMarkdown>{item}</ReactMarkdown> : 
+                              <Typography color="text.secondary">No content available</Typography>
+                            } 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      No claims were generated for this search result
+                    </Typography>
+                  )}
+                </Typography>
               </CardContent>
-            </Card> */}
+            </Card>
 
             {/* Metadata Card */}
             <Card sx={{ marginTop: 2 }}>

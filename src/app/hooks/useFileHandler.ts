@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Entity } from "../models/entity";
-import { Relationship } from "../models/relationship";
-import { Document } from "../models/document";
-import { TextUnit } from "../models/text-unit";
-import { Community } from "../models/community";
-import { CommunityReport } from "../models/community-report";
-import { Covariate } from "../models/covariate";
-import { readParquetFile } from "../utils/parquet-utils";
 
+import { Entity }            from "../models/entity";
+import { Relationship }      from "../models/relationship";
+import { Document }          from "../models/document";
+import { TextUnit }          from "../models/text-unit";
+import { Community }         from "../models/community";
+import { CommunityReport }   from "../models/community-report";
+import { Covariate }         from "../models/covariate";
+import { readParquetFile }   from "../utils/parquet-utils";
+
+/* ─────────────── static maps ─────────────── */
 const baseFileNames = [
   "entities.parquet",
   "relationships.parquet",
@@ -19,155 +21,129 @@ const baseFileNames = [
   "covariates.parquet",
 ];
 
-const baseMapping: { [key: string]: string } = {
-  "entities.parquet": "entity",
-  "relationships.parquet": "relationship",
-  "documents.parquet": "document",
-  "text_units.parquet": "text_unit",
-  "communities.parquet": "community",
-  "community_reports.parquet": "community_report",
-  "covariates.parquet": "covariate",
+const baseMapping: Record<string, string> = {
+  "entities.parquet":           "entity",
+  "relationships.parquet":      "relationship",
+  "documents.parquet":          "document",
+  "text_units.parquet":         "text_unit",
+  "communities.parquet":        "community",
+  "community_reports.parquet":  "community_report",
+  "covariates.parquet":         "covariate",
 };
 
-const fileSchemas: { [key: string]: string } = {};
-Object.entries(baseMapping).forEach(([key, value]) => {  
-  fileSchemas[key] = value;  
-  fileSchemas[`create_final_${key}`] = value;
+const fileSchemas: Record<string, string> = {};
+Object.entries(baseMapping).forEach(([k, v]) => {
+  fileSchemas[k]                 = v;
+  fileSchemas[`create_final_${k}`] = v;
 });
 
+/* ─────────────── hook ─────────────── */
 const useFileHandler = () => {
   const navigate = useNavigate();
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [relationships, setRelationships] = useState<Relationship[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [textunits, setTextUnits] = useState<TextUnit[]>([]);
-  const [communities, setCommunities] = useState<Community[]>([]);
-  const [covariates, setCovariates] = useState<Covariate[]>([]);
-  const [communityReports, setCommunityReports] = useState<CommunityReport[]>(
-    []
-  );
 
-  const handleFilesRead = async (files: File[]) => {
+  /* ——— React state for every table ——— */
+  const [entities,         setEntities]         = useState<Entity[]>([]);
+  const [relationships,    setRelationships]    = useState<Relationship[]>([]);
+  const [documents,        setDocuments]        = useState<Document[]>([]);
+  const [textunits,        setTextUnits]        = useState<TextUnit[]>([]);
+  const [communities,      setCommunities]      = useState<Community[]>([]);
+  const [covariates,       setCovariates]       = useState<Covariate[]>([]);
+  const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
+
+  /* ——— DRAG-AND-DROP / DEFAULT LOADING ——— */
+  const handleFilesRead = useCallback(async (files: File[]) => {
     await loadFiles(files);
-  };
+  }, []);
 
-  const loadFiles = async (files: File[] | string[]) => {
-    const entitiesArray: Entity[][] = [];
-    const relationshipsArray: Relationship[][] = [];
-    const documentsArray: Document[][] = [];
-    const textUnitsArray: TextUnit[][] = [];
-    const communitiesArray: Community[][] = [];
-    const communityReportsArray: CommunityReport[][] = [];
-    const covariatesArray: Covariate[][] = [];
+  const loadFiles = useCallback(async (files: Array<File | string>) => {
+    const ents:   Entity[][]           = [];
+    const rels:   Relationship[][]     = [];
+    const docs:   Document[][]         = [];
+    const txts:   TextUnit[][]         = [];
+    const comms:  Community[][]        = [];
+    const reports:CommunityReport[][]  = [];
+    const covs:   Covariate[][]        = [];
 
-    for (const file of files) {
-      const fileName =
-        typeof file === "string" ? file.split("/").pop()! : file.name;      
-      const schema = fileSchemas[fileName] || fileSchemas[`create_final_${fileName}`];
+    for (const f of files) {
+      const fileName = typeof f === "string" ? f.split("/").pop()! : f.name;
+      const schema   = fileSchemas[fileName];
 
       let data;
-      if (typeof file === "string") {
-        // Fetch default file from public folder as binary data
-        const response = await fetch(file);
-        if (!response.ok) {
-          console.error(`Failed to fetch file ${file}: ${response.statusText}`);
-          continue;
-        }
-
-        // Convert ArrayBuffer to File object
-        const buffer = await response.arrayBuffer();
-        const blob = new Blob([buffer], { type: "application/x-parquet" });
-        const fileBlob = new File([blob], fileName);
-
-        // Use the File object in readParquetFile
-        data = await readParquetFile(fileBlob, schema);
-        // console.log(`Successfully loaded ${fileName} from public folder`);
+      if (typeof f === "string") {
+        const resp = await fetch(f);
+        if (!resp.ok) { console.error("Fetch failed for", f); continue; }
+        const buf  = await resp.arrayBuffer();
+        data = await readParquetFile(
+          new File([buf], fileName, { type: "application/x-parquet" }),
+          schema
+        );
       } else {
-        // Handle drag-and-drop files directly
-        data = await readParquetFile(file, schema);
-        // console.log(`Successfully loaded ${file.name} from drag-and-drop`);
+        data = await readParquetFile(f, schema);
       }
 
-      if (schema === "entity") {
-        entitiesArray.push(data);
-      } else if (schema === "relationship") {
-        relationshipsArray.push(data);
-      } else if (schema === "document") {
-        documentsArray.push(data);
-      } else if (schema === "text_unit") {
-        textUnitsArray.push(data);
-      } else if (schema === "community") {
-        communitiesArray.push(data);
-      } else if (schema === "community_report") {
-        communityReportsArray.push(data);
-      } else if (schema === "covariate") {
-        covariatesArray.push(data);
+      switch (schema) {
+        case "entity":           ents.push(data);      break;
+        case "relationship":     rels.push(data);      break;
+        case "document":         docs.push(data);      break;
+        case "text_unit":        txts.push(data);      break;
+        case "community":        comms.push(data);     break;
+        case "community_report": reports.push(data);   break;
+        case "covariate":        covs.push(data);      break;
+        default: break;
       }
     }
 
-    setEntities(entitiesArray.flat());
-    setRelationships(relationshipsArray.flat());
-    setDocuments(documentsArray.flat());
-    setTextUnits(textUnitsArray.flat());
-    setCommunities(communitiesArray.flat());
-    setCommunityReports(communityReportsArray.flat());
-    setCovariates(covariatesArray.flat());
-  };
+    setEntities(ents.flat());
+    setRelationships(rels.flat());
+    setDocuments(docs.flat());
+    setTextUnits(txts.flat());
+    setCommunities(comms.flat());
+    setCommunityReports(reports.flat());
+    setCovariates(covs.flat());
+  }, []);
 
-  const checkFileExists = async (filePath: string) => {
+  /* ——— check if a default file exists ——— */
+  const checkFileExists = async (url: string) => {
     try {
-      const response = await fetch(filePath, {
-        method: "HEAD",
-        cache: "no-store",
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get("Content-Type");
-
-        if (contentType === "application/octet-stream") {
-          // Updated Content-Type check
-          console.log(`File exists: ${filePath}`);
-          return true;
-        } else {
-          // console.warn(
-          //   `File does not exist or incorrect type: ${filePath} (Content-Type: ${contentType})`
-          // );
-          return false;
-        }
-      } else {
-        console.warn(
-          `File does not exist: ${filePath} (status: ${response.status})`
-        );
-        return false;
-      }
-    } catch (error) {
-      console.error(`Error checking file existence for ${filePath}`, error);
+      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
+      return r.ok && r.headers.get("Content-Type") === "application/octet-stream";
+    } catch {
       return false;
     }
   };
 
-  const loadDefaultFiles = async () => {
-    const filesToLoad = [];
+  /* ——— dev helper to auto-load from /public/artifacts ——— */
+  const loadDefaultFiles = useCallback(async () => {
+    const list: string[] = [];
 
-    for (const baseName of baseFileNames) {
-      const prefixedPath = process.env.PUBLIC_URL + `/artifacts/create_final_${baseName}`;
-      const unprefixedPath = process.env.PUBLIC_URL + `/artifacts/${baseName}`;
-  
-      if (await checkFileExists(prefixedPath)) {
-        filesToLoad.push(prefixedPath);
-      } else if (await checkFileExists(unprefixedPath)) {
-        filesToLoad.push(unprefixedPath);
-      }
+    for (const b of baseFileNames) {
+      const pref = `${process.env.PUBLIC_URL}/artifacts/create_final_${b}`;
+      const plain = `${process.env.PUBLIC_URL}/artifacts/${b}`;
+
+      if      (await checkFileExists(pref))  list.push(pref);
+      else if (await checkFileExists(plain)) list.push(plain);
     }
-    
-    if (filesToLoad.length > 0) {
-      await loadFiles(filesToLoad);
+
+    if (list.length) {
+      await loadFiles(list);
       navigate("/graph", { replace: true });
     } else {
-      console.log("No default files found in the public folder.");
+      console.log("No default parquet files found.");
     }
-  };
+  }, [loadFiles, navigate]);
 
+  /* 🆕 ——— clear everything when /clear/output succeeds ——— */
+  const resetAllTables = useCallback(() => {
+    setEntities([]);
+    setRelationships([]);
+    setDocuments([]);
+    setTextUnits([]);
+    setCommunities([]);
+    setCommunityReports([]);
+    setCovariates([]);
+  }, []);
+
+  /* ——— expose API ——— */
   return {
     entities,
     relationships,
@@ -178,6 +154,7 @@ const useFileHandler = () => {
     communityReports,
     handleFilesRead,
     loadDefaultFiles,
+    resetAllTables,          // 🆕 exported
   };
 };
 
